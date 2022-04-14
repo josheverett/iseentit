@@ -1,0 +1,23 @@
+.tab {
+  display: inline-block;
+  padding: 10px;
+  color: #333333;
+  border: 1px solid #999999;
+  background: #cccccc;
+  opacity: 0.6;
+  cursor: pointer;
+  transition: 200ms;
+}
+
+.tab:hover,
+.tab.active {
+  opacity: 1;
+}
+
+.tab-pane {
+  display: none;
+}
+
+.tab-pane.active {
+  display: block;
+}
