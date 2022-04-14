@@ -13,11 +13,11 @@ const HOSTS_TO_PLATFORMS = {
 
 const ITEM_DECORATORS = {};
 
-const AVATAR_URL = chrome.runtime.getURL('iseentit.jpeg');
+const AVATAR_URL = chrome.runtime.getURL('iseentit.png');
 
 const AUDIO = new Audio(chrome.runtime.getURL('iseentit.mp3'));
 
-function createModal (item) {
+function createModal (metadata) {
   AUDIO.play();
   const container = document.createElement('iseentit');
   container.className = 'iseentit-modal-container';
@@ -26,12 +26,16 @@ function createModal (item) {
       <iseentit
         class="iseentit-avatar"
         style="background-image: url('${AVATAR_URL}')"
-      >
+      ></iseentit>
+      <iseentit
+        class="iseentit-poster"
+        style="background-image: url('${metadata.image}')"
+      ></iseentit>
+      <iseentit class="iseentit-title">
+        ${metadata.title}
+        <iseentit class="iseentit-year">(${metadata.year})</iseentit>
       </iseentit>
-      <iseentit class="iseentit-poster">
-        poster
-      </iseentit>
-      <iseentit class="iseentit-btn iseentit-btn-sneet">Seent It!</iseentit>
+      <iseentit class="iseentit-btn iseentit-btn-seent">I seent it!</iseentit>
       <iseentit class="iseentit-btn iseentit-btn-rate">Rate</iseentit>
     </iseentit>
   `;
@@ -57,30 +61,34 @@ function destroyModal () {
   });
 }
 
-function injectFab (metadata) {
+function extractMetadata (platform, item) {
+  switch (platform) {
+    case 'RT':
+      return {
+        node: item,
+        title: item.querySelector('span').textContent,
+        // Going to need to fetch the target page and extract year from that
+        // or something. Bleh.
+        // year: null, // :(
+        year: '????',
+        image: item.querySelector('img').src,
+      };
+  }
+}
+
+function injectFab (platform, item) {
   const fab = document.createElement('iseentit');
   fab.className = 'iseentit-fab';
   fab.style.backgroundImage = `url("${AVATAR_URL}")`;
-  metadata.appendChild(fab);
-  // fab.addEventListener('click', () => createModal(metadata.node));
-  fab.addEventListener('click', () => createModal(metadata));
+  item.appendChild(fab);
+  fab.addEventListener('click', () => {
+    // metadata extracted on click because image assets aren't ready at runtime
+    createModal(extractMetadata(platform, item));
+  });
 }
 
 ITEM_DECORATORS.RT = function () {
-  const items = $$('tiles-carousel-responsive-item');
-
-  items.forEach(injectFab);
-  // items
-  //   .map((item) => {
-  //     const href = item.querySelector('a').href; // E.g. /m/true_grit_2010
-  //     const year = href.split('_').slice(-1)[0];
-  //     return {
-  //       node: item,
-  //       title: 1,
-  //       year,
-  //     };
-  //   })
-  //   .forEach(injectFab);
+  $$('tiles-carousel-responsive-item').forEach(injectFab.bind(null, 'RT'));
 };
 
 const platform = HOSTS_TO_PLATFORMS[window.location.host];

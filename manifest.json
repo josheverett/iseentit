@@ -4,6 +4,12 @@
   "version": "0.0.1",
   "manifest_version": 3,
 
+  "icons": {
+    "16": "iseentit.png",
+    "48": "iseentit.png",
+    "128": "iseentit.png"
+  },
+
   "content_scripts": [
     {
       "matches": ["https://*.rottentomatoes.com/*"],
@@ -14,7 +20,7 @@
 
   "web_accessible_resources": [
     {
-      "resources": ["iseentit.jpeg", "iseentit.mp3"],
+      "resources": ["iseentit.png", "iseentit.mp3"],
       "matches": ["https://*.rottentomatoes.com/*"]
     }
   ]

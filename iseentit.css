@@ -1,8 +1,22 @@
+@keyframes iseentit-poster {
+  0% {
+    top: -75px;
+    opacity: 0;
+    transform: scale(0.5) rotate(30deg);
+  }
+  100% {
+    top: -25px;
+    opacity: 1;
+    transform: scale(1) rotate(10deg);
+  }
+}
+
 tiles-carousel-responsive-item {
   position: relative; /* It had to be done. #DrStrange #YOLO */
 }
 
 iseentit {
+  display: block;
   box-sizing: border-box;
 }
 
@@ -37,6 +51,7 @@ iseentit {
   right: 0;
   background: rgb(255 255 255 / 0.4);
   opacity: 0;
+  z-index: 2147483647;
   transition: 200ms;
 }
 
@@ -48,9 +63,10 @@ iseentit {
   position: relative;
   top: -200px;
   width: 300px;
-  height: 300px;
+  /* height: 300px; */
   border: 1px solid #cccccc;
   border-radius: 24px;
+  padding: 0 24px 24px;
   background: linear-gradient(#eeeeee, #fefefe);
   box-shadow: rgb(0 0 0 / 30%) 0px 0px 40px;
   opacity: 0;
@@ -83,4 +99,56 @@ iseentit {
   left: -25px;
   opacity: 1;
   transform: rotate(0deg);
+}
+
+.iseentit-poster {
+  position: absolute;
+  right: 0;
+  width: 70px;
+  height: 100px;
+  border: 2px solid hsl(20deg 60% 55%);
+  background-size: cover;
+  background-position: center;
+  box-shadow: 5px 5px 10px hsl(20deg 60% 20% / 80%);
+  opacity: 0;
+  animation-name: iseentit-poster;
+  animation-duration: 400ms;
+  animation-delay: 600ms;
+  animation-fill-mode: forwards;
+}
+
+.iseentit-title {
+  margin-top: 100px;
+  line-height: 24px;
+  font-size: 18px;
+  color: #333333;
+}
+
+.iseentit-year {
+  display: inline;
+  color: #999999;
+}
+
+.iseentit-btn {
+  margin-top: 24px;
+  border-radius: 8px;
+  line-height: 48px;
+  font-size: 24px;
+  text-align: center;
+  text-transform: uppercase;
+  color: rgb(0 0 0 / 0.6);
+  background: linear-gradient(#dfdfdf, #cccccc);
+  box-shadow: inset 0 0 1px 1px rgb(0 0 0 / 10%);
+  opacity: 0.8;
+  transition: 200ms;
+  cursor: pointer;
+}
+
+.iseentit-btn:hover {
+  opacity: 1;
+  transform: rotate(1deg);
+}
+
+.iseentit-btn-seent {
+  background: linear-gradient(hsl(20deg 60% 55%), hsl(20deg 60% 50%));
 }
