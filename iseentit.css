@@ -46,20 +46,22 @@ iseentit {
 
 .iseentit-modal {
   position: relative;
-  top: -100px;
-  width: 600px;
-  height: 400px;
+  top: -200px;
+  width: 300px;
+  height: 300px;
   border: 1px solid #cccccc;
   border-radius: 24px;
   background: linear-gradient(#eeeeee, #fefefe);
   box-shadow: rgb(0 0 0 / 30%) 0px 0px 40px;
   opacity: 0;
   transition: 200ms;
+  transform: scale(0.5);
 }
 
 .iseentit-animate .iseentit-modal {
   top: 0;
   opacity: 1;
+  transform: scale(1);
 }
 
 .iseentit-avatar {

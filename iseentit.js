@@ -15,7 +15,10 @@ const ITEM_DECORATORS = {};
 
 const AVATAR_URL = chrome.runtime.getURL('iseentit.jpeg');
 
+const AUDIO = new Audio(chrome.runtime.getURL('iseentit.mp3'));
+
 function createModal (item) {
+  AUDIO.play();
   const container = document.createElement('iseentit');
   container.className = 'iseentit-modal-container';
   container.innerHTML = `
@@ -54,17 +57,30 @@ function destroyModal () {
   });
 }
 
-function injectFab (item) {
+function injectFab (metadata) {
   const fab = document.createElement('iseentit');
   fab.className = 'iseentit-fab';
   fab.style.backgroundImage = `url("${AVATAR_URL}")`;
-  item.appendChild(fab);
-  fab.addEventListener('click', () => createModal(item));
+  metadata.appendChild(fab);
+  // fab.addEventListener('click', () => createModal(metadata.node));
+  fab.addEventListener('click', () => createModal(metadata));
 }
 
 ITEM_DECORATORS.RT = function () {
   const items = $$('tiles-carousel-responsive-item');
+
   items.forEach(injectFab);
+  // items
+  //   .map((item) => {
+  //     const href = item.querySelector('a').href; // E.g. /m/true_grit_2010
+  //     const year = href.split('_').slice(-1)[0];
+  //     return {
+  //       node: item,
+  //       title: 1,
+  //       year,
+  //     };
+  //   })
+  //   .forEach(injectFab);
 };
 
 const platform = HOSTS_TO_PLATFORMS[window.location.host];
