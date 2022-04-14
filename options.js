@@ -21,6 +21,8 @@ function decodeSyncData (syncData) {
   };
 }
 
+// TODO: This needs to be sorted by: year --> title --> (rewatch + merit)
+// Not gonna pull in underscore or some shit, do it the old fashioned way.
 function createTable (tab, items) {
   const node = $(`.tab-pane[data-tab="${tab}"]`);
   node.innerHTML = `

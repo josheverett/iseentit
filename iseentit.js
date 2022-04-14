@@ -18,7 +18,7 @@ const HOSTS_TO_PLATFORMS = {
 
 const RATINGS_STRINGS = {
   rewatchability: [
-    `I never want to watch this again`,
+    `No interest in watching this again`,
     `It's worth a second viewing`,
     `It's worth watching a few times`,
     `I've watched / will watch this many times`,
@@ -167,6 +167,7 @@ function createModal (node, metadata) {
       RATINGS.rewatchability = e.target.dataset.rating;
       container.dataset.selectedScreen = 3;
     } else {
+      node.querySelector('.iseentit-fab').classList.add('iseentit-seent');
       RATINGS.artisticMerit = e.target.dataset.rating;
       await upsert(node, { ...metadata, ...RATINGS });
       destroyModal();
