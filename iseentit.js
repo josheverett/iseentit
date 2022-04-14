@@ -12,12 +12,15 @@ const HOSTS_TO_PLATFORMS = {
 
 const UI_DECORATORS = {};
 
+const IMG_URL = chrome.runtime.getURL('iseentit.jpeg');
+
 function injectUi (item) {
   const container = document.createElement('iseentit');
   container.className = 'iseentit-container';
   container.innerHTML = `
-    <iseentit class="iseentit-fab">
-      sup earf
+    <iseentit
+        class="iseentit-fab"
+        style="background-image: url('${IMG_URL}')">
     </iseentit>
   `;
   item.appendChild(container);

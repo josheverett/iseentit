@@ -10,5 +10,12 @@
       "css": ["iseentit.css"],
       "js": ["iseentit.js"]
     }
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": ["iseentit.jpeg"],
+      "matches": ["https://*.rottentomatoes.com/*"]
+    }
   ]
 }
