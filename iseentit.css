@@ -130,7 +130,7 @@ iseentit {
   opacity: 0;
   animation-name: iseentit-poster;
   animation-duration: 400ms;
-  animation-delay: 600ms;
+  animation-delay: 400ms;
   animation-fill-mode: forwards;
 }
 
