@@ -4,17 +4,9 @@ tiles-carousel-responsive-item {
 
 iseentit {
   box-sizing: border-box;
-  transition: 200ms;
 }
 
-iseentit.iseentit-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  outline: 1px solid red;
-}
-
-iseentit.iseentit-fab {
+.iseentit-fab {
   display: block;
   position: absolute;
   top: 10px;
@@ -25,10 +17,68 @@ iseentit.iseentit-fab {
   border-radius: 100%;
   background-size: cover;
   box-shadow: 5px 5px 10px hsl(20deg 60% 20% / 80%);
+  transition: 200ms;
   cursor: pointer;
 }
 
-iseentit.iseentit-fab:hover {
+.iseentit-fab:hover {
   box-shadow: 5px 5px 20px hsl(20deg 60% 20% / 100%);
   transform: rotate(15deg);
+}
+
+.iseentit-modal-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgb(255 255 255 / 0.4);
+  opacity: 0;
+  transition: 200ms;
+}
+
+.iseentit-animate.iseentit-modal-container {
+  opacity: 1;
+}
+
+.iseentit-modal {
+  position: relative;
+  top: -100px;
+  width: 600px;
+  height: 400px;
+  border: 1px solid #cccccc;
+  border-radius: 24px;
+  background: linear-gradient(#eeeeee, #fefefe);
+  box-shadow: rgb(0 0 0 / 30%) 0px 0px 40px;
+  opacity: 0;
+  transition: 200ms;
+}
+
+.iseentit-animate .iseentit-modal {
+  top: 0;
+  opacity: 1;
+}
+
+.iseentit-avatar {
+  position: absolute;
+  top: -25px;
+  left: 75px;
+  width: 100px;
+  height: 100px;
+  border: 2px solid hsl(20deg 60% 55%);
+  border-radius: 100%;
+  background-size: cover;
+  box-shadow: 5px 5px 10px hsl(20deg 60% 20% / 80%);
+  opacity: 0;
+  transition: 400ms;
+  transform: rotate(20deg);
+}
+
+.iseentit-animate .iseentit-avatar {
+  left: -25px;
+  opacity: 1;
+  transform: rotate(0deg);
 }
