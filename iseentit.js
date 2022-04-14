@@ -20,6 +20,8 @@ const AVATAR_URL = chrome.runtime.getURL('iseentit.png');
 
 const AUDIO = new Audio(chrome.runtime.getURL('iseentit.mp3'));
 
+const RATINGS = { rewatchability: 0, artisticMerit: 0 }; // yolo
+
 // PARSED_DATA_BY_TITLE necessary due to combination of RT not including year in
 // poster lockups + being severely constrained on storage.
 let SYNC_DATA, PARSED_DATA, PARSED_DATA_BY_TITLE;
@@ -79,7 +81,7 @@ async function upsert (node, metadata) {
     newData.rewatchability || 0, newData.artisticMerit || 0
   ]);
 
-  chrome.storage.sync.set({ 'iseentit': SYNC_DATA });
+  return await chrome.storage.sync.set({ 'iseentit': SYNC_DATA });
 }
 
 function createModal (node, metadata) {
@@ -87,6 +89,7 @@ function createModal (node, metadata) {
 
   const container = document.createElement('iseentit');
   container.className = 'iseentit-modal-container';
+  container.dataset.selectedScreen = 1;
   // TODO: "unseent" --> delete record
   container.innerHTML = `
     <iseentit class="iseentit-modal">
@@ -98,12 +101,32 @@ function createModal (node, metadata) {
         class="iseentit-poster"
         style="background-image: url('${metadata.image}')"
       ></iseentit>
-      <iseentit class="iseentit-title">
-        ${metadata.title}
-        <!-- iseentit class="iseentit-year">(${metadata.year})</iseentit -->
+      <iseentit class="iseentit-screens">
+        <iseentit class="iseentit-screen" data-screen="1">
+          <iseentit class="iseentit-title">
+            ${metadata.title}
+            <!-- iseentit class="iseentit-year">(${metadata.year})</iseentit -->
+          </iseentit>
+          <iseentit class="iseentit-btn iseentit-btn-seent">I seent it!</iseentit>
+          <iseentit class="iseentit-btn iseentit-btn-rate">Rate</iseentit>
+        </iseentit>
+        <iseentit class="iseentit-screen" data-screen="2">
+          <iseentit class="iseentit-title">Rewatchability</iseentit>
+          <iseentit class="iseentit-link" data-rating="5">I will never get tired of rewatching this</iseentit>
+          <iseentit class="iseentit-link" data-rating="4">I've watched / will watch this many times</iseentit>
+          <iseentit class="iseentit-link" data-rating="3">It's worth watching a few times</iseentit>
+          <iseentit class="iseentit-link" data-rating="2">It's worth a second viewing</iseentit>
+          <iseentit class="iseentit-link" data-rating="1">I never want to watch this again</iseentit>
+        </iseentit>
+        <iseentit class="iseentit-screen" data-screen="3">
+          <iseentit class="iseentit-title">Artistic Merit</iseentit>
+          <iseentit class="iseentit-link" data-rating="5">A cinematic masterpiece</iseentit>
+          <iseentit class="iseentit-link" data-rating="4">Oscar-worthy</iseentit>
+          <iseentit class="iseentit-link" data-rating="3">A quality film or series</iseentit>
+          <iseentit class="iseentit-link" data-rating="2">An average movie or show</iseentit>
+          <iseentit class="iseentit-link" data-rating="1">Little to no redeeming artistic qualities</iseentit>
+        </iseentit>
       </iseentit>
-      <iseentit class="iseentit-btn iseentit-btn-seent">I seent it!</iseentit>
-      <iseentit class="iseentit-btn iseentit-btn-rate">Rate</iseentit>
     </iseentit>
   `;
 
@@ -112,11 +135,27 @@ function createModal (node, metadata) {
       destroyModal();
       return;
     }
+
     if (e.target.classList.contains('iseentit-btn-seent')) {
       node.querySelector('.iseentit-fab').classList.add('iseentit-seent');
       await upsert(node, metadata);
       destroyModal();
       return;
+    }
+
+    if (e.target.classList.contains('iseentit-btn-rate')) {
+      container.dataset.selectedScreen = 2;
+      return;
+    }
+
+    if (!e.target.dataset.rating) return;
+    if (container.dataset.selectedScreen === '2') {
+      RATINGS.rewatchability = e.target.dataset.rating;
+      container.dataset.selectedScreen = 3;
+    } else {
+      RATINGS.artisticMerit = e.target.dataset.rating;
+      await upsert(node, { ...metadata, ...RATINGS });
+      destroyModal();
     }
   });
 
