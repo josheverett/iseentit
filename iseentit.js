@@ -18,18 +18,18 @@ const HOSTS_TO_PLATFORMS = {
 
 const RATINGS_STRINGS = {
   rewatchability: [
-    `I will never get tired of rewatching this`,
-    `I've watched / will watch this many times`,
-    `It's worth watching a few times`,
-    `It's worth a second viewing`,
     `I never want to watch this again`,
+    `It's worth a second viewing`,
+    `It's worth watching a few times`,
+    `I've watched / will watch this many times`,
+    `I will never get tired of rewatching this`,
   ],
   artisticMerit: [
-    `A cinematic masterpiece`,
-    `Oscar-worthy`,
-    `A quality film or series`,
-    `An average movie or show`,
     `Little to no redeeming artistic qualities`,
+    `An average movie or show`,
+    `A quality film or series`,
+    `Oscar-worthy`,
+    `A cinematic masterpiece`,
   ]
 };
 
@@ -104,7 +104,7 @@ async function upsert (node, metadata) {
 function createRatingLinks (ratings) {
   return ratings.map((rating, i) => {
     return `<iseentit class="iseentit-link" data-rating="${i + 1}">${rating}</iseentit>`;
-  }).join('');
+  }).reverse().join('');
 }
 
 function createModal (node, metadata) {
