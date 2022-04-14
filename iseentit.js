@@ -16,6 +16,23 @@ const HOSTS_TO_PLATFORMS = {
   'www.imdb.com': PLATFORMS.IMDB,
 };
 
+const RATINGS_STRINGS = {
+  rewatchability: [
+    `I will never get tired of rewatching this`,
+    `I've watched / will watch this many times`,
+    `It's worth watching a few times`,
+    `It's worth a second viewing`,
+    `I never want to watch this again`,
+  ],
+  artisticMerit: [
+    `A cinematic masterpiece`,
+    `Oscar-worthy`,
+    `A quality film or series`,
+    `An average movie or show`,
+    `Little to no redeeming artistic qualities`,
+  ]
+};
+
 const AVATAR_URL = chrome.runtime.getURL('iseentit.png');
 
 const AUDIO = new Audio(chrome.runtime.getURL('iseentit.mp3'));
@@ -84,6 +101,12 @@ async function upsert (node, metadata) {
   return await chrome.storage.sync.set({ 'iseentit': SYNC_DATA });
 }
 
+function createRatingLinks (ratings) {
+  return ratings.map((rating, i) => {
+    return `<iseentit class="iseentit-link" data-rating="${i + 1}">${rating}</iseentit>`;
+  }).join('');
+}
+
 function createModal (node, metadata) {
   AUDIO.play();
 
@@ -112,19 +135,11 @@ function createModal (node, metadata) {
         </iseentit>
         <iseentit class="iseentit-screen" data-screen="2">
           <iseentit class="iseentit-title">Rewatchability</iseentit>
-          <iseentit class="iseentit-link" data-rating="5">I will never get tired of rewatching this</iseentit>
-          <iseentit class="iseentit-link" data-rating="4">I've watched / will watch this many times</iseentit>
-          <iseentit class="iseentit-link" data-rating="3">It's worth watching a few times</iseentit>
-          <iseentit class="iseentit-link" data-rating="2">It's worth a second viewing</iseentit>
-          <iseentit class="iseentit-link" data-rating="1">I never want to watch this again</iseentit>
+          ${createRatingLinks(RATINGS_STRINGS.rewatchability)}
         </iseentit>
         <iseentit class="iseentit-screen" data-screen="3">
           <iseentit class="iseentit-title">Artistic Merit</iseentit>
-          <iseentit class="iseentit-link" data-rating="5">A cinematic masterpiece</iseentit>
-          <iseentit class="iseentit-link" data-rating="4">Oscar-worthy</iseentit>
-          <iseentit class="iseentit-link" data-rating="3">A quality film or series</iseentit>
-          <iseentit class="iseentit-link" data-rating="2">An average movie or show</iseentit>
-          <iseentit class="iseentit-link" data-rating="1">Little to no redeeming artistic qualities</iseentit>
+          ${createRatingLinks(RATINGS_STRINGS.artisticMerit)}
         </iseentit>
       </iseentit>
     </iseentit>
