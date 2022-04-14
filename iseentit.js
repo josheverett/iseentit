@@ -20,7 +20,9 @@ const AVATAR_URL = chrome.runtime.getURL('iseentit.png');
 
 const AUDIO = new Audio(chrome.runtime.getURL('iseentit.mp3'));
 
-let SYNC_DATA, PARSED_DATA;
+// PARSED_DATA_BY_TITLE necessary due to combination of RT not including year in
+// poster lockups + being severely constrained on storage.
+let SYNC_DATA, PARSED_DATA, PARSED_DATA_BY_TITLE;
 
 const ITEM_DECORATORS = {};
 
@@ -48,6 +50,7 @@ function decodeSyncData (syncData) {
       const [year, title, rewatchability, artisticMerit] = item;
       const val = {type, year, title, rewatchability, artisticMerit};
       const key = makeKeyFromMetadata(val);
+      val.key = key;
       memo[key] = val;
       return memo;
     }, {});
@@ -58,16 +61,24 @@ function decodeSyncData (syncData) {
   };
 }
 
-function upsert (metadata) {
-  const key = makeKeyFromMetadata(metadata);
-  const oldData = PARSED_DATA[metadata.type][key];
+async function upsert (node, metadata) {
+  // RT poster lockups don't include the year. -_-
+  if (metadata.platform === PLATFORMS.RT) {
+    const detailPage = await fetch(node.querySelector('a').href);
+    const html = await detailPage.text();
+    // yolo
+    const matches = new RegExp(/"cag\[release\]":"(\d+)"/, 'g').exec(html);
+    metadata.year = matches[1];
+  }
+
+  const oldData = PARSED_DATA[metadata.type][metadata.key];
   const newData = { ...oldData, ...metadata };
   SYNC_DATA[metadata.type] = SYNC_DATA[metadata.type] || [];
   SYNC_DATA[metadata.type].push([
     newData.year, newData.title,
     newData.rewatchability || 0, newData.artisticMerit || 0
   ]);
-  const json = JSON.stringify(SYNC_DATA);
+
   chrome.storage.sync.set({ 'iseentit': SYNC_DATA });
 }
 
@@ -89,21 +100,21 @@ function createModal (node, metadata) {
       ></iseentit>
       <iseentit class="iseentit-title">
         ${metadata.title}
-        <iseentit class="iseentit-year">(${metadata.year})</iseentit>
+        <!-- iseentit class="iseentit-year">(${metadata.year})</iseentit -->
       </iseentit>
       <iseentit class="iseentit-btn iseentit-btn-seent">I seent it!</iseentit>
       <iseentit class="iseentit-btn iseentit-btn-rate">Rate</iseentit>
     </iseentit>
   `;
 
-  container.addEventListener('click', (e) => {
+  container.addEventListener('click', async (e) => {
     if (e.target === container) {
       destroyModal();
       return;
     }
     if (e.target.classList.contains('iseentit-btn-seent')) {
       node.querySelector('.iseentit-fab').classList.add('iseentit-seent');
-      upsert(metadata);
+      await upsert(node, metadata);
       destroyModal();
       return;
     }
@@ -132,31 +143,39 @@ function extractMetadata (platform, node) {
     case PLATFORMS.RT:
       const type = node.querySelector('a').pathname.indexOf('/m/') === 0
         ? CONTENT_TYPES.FILM : CONTENT_TYPES.SERIES;
-      return {
+      const metadata = {
         node,
+        platform,
         type,
         title: node.querySelector('span').textContent,
-        // Going to need to fetch the target page and extract year from that
-        // or something. Bleh.
-        // year: null, // :(
-        year: '????',
+        year: null, // RT doesn't have the year on poster lockups.
         image: node.querySelector('img').src,
       };
+      metadata.key = makeKeyFromMetadata(metadata);
+      return metadata;
   }
 }
 
 function injectFab (platform, node) {
   const metadata = extractMetadata(platform, node);
-  const key = makeKeyFromMetadata(metadata);
 
   const fab = document.createElement('iseentit');
   fab.style.backgroundImage = `url("${AVATAR_URL}")`;
   fab.classList.add('iseentit-fab');
-  if (key in PARSED_DATA[metadata.type]) fab.classList.add('iseentit-seent');
+
+  let isSeent = false;
+  switch (platform) {
+    case PLATFORMS.RT:
+      isSeent = metadata.title in PARSED_DATA_BY_TITLE;
+      break;
+    default:
+      isSeent = metadata.key in PARSED_DATA[metadata.type];
+  }
+  if (isSeent) fab.classList.add('iseentit-seent');
 
   node.appendChild(fab);
   fab.addEventListener('click', () => {
-    // metadata extracted on click because image assets aren't ready at runtime
+    // Metadata extracted on click because image assets aren't ready at runtime.
     createModal(node, extractMetadata(platform, node));
   });
 }
@@ -164,6 +183,14 @@ function injectFab (platform, node) {
 chrome.storage.sync.get('iseentit', function (data) {
   SYNC_DATA = data.iseentit || { FILM: [], SERIES: [] };
   PARSED_DATA = decodeSyncData(SYNC_DATA);
+
+  PARSED_DATA_BY_TITLE = {};
+  Object.keys(PARSED_DATA).forEach((contentType) => {
+    for (const [_, metadata] of Object.entries(PARSED_DATA[contentType])) {
+      PARSED_DATA_BY_TITLE[metadata.title] = metadata;
+    }
+  });
+
   const platform = HOSTS_TO_PLATFORMS[window.location.host];
   const itemDecorator = ITEM_DECORATORS[platform];
   itemDecorator();
