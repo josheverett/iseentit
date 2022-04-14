@@ -10,6 +10,10 @@
     "128": "iseentit.png"
   },
 
+  "permissions": [
+    "storage"
+  ],
+
   "content_scripts": [
     {
       "matches": ["https://*.rottentomatoes.com/*"],
