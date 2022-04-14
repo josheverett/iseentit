@@ -63,7 +63,6 @@ function makeKeyFromMetadata (metadata) {
  * 1000 movies.
  */
 function decodeSyncData (syncData) {
-  // don't need the second argument here. derp.
   const reduceItemArrayToMetadataMap = (type, items=[]) => {
     return items.reduce((memo, item) => {
       const [year, title, rewatchability, artisticMerit] = item;

@@ -1,7 +1,47 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-size: 14px;
+  color: #333333;
+}
+
+table {
+  border: 1px solid #cccccc;
+  border-width: 0 1px 1px;
+  border-collapse: collapse;
+}
+
+thead {
+  font-weight: 500;
+}
+
+tr {
+  border-top: 1px solid #cccccc;
+}
+
+thead tr {
+  background: #eeeeee;
+}
+
+tbody tr:nth-of-type(even) {
+  background: #fafafa;
+}
+
+td {
+  padding: 10px;
+}
+
+tbody td:nth-of-type(3),
+tbody td:nth-of-type(4) {
+  text-align: center;
+}
+
+.btn,
 .tab {
   display: inline-block;
   padding: 10px;
-  color: #333333;
   border: 1px solid #999999;
   background: #cccccc;
   opacity: 0.6;
@@ -9,6 +49,7 @@
   transition: 200ms;
 }
 
+.btn:hover,
 .tab:hover,
 .tab.active {
   opacity: 1;
@@ -16,6 +57,7 @@
 
 .tab-pane {
   display: none;
+  margin: 24px 0;
 }
 
 .tab-pane.active {
