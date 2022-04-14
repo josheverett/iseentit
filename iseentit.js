@@ -71,7 +71,7 @@ function upsert (metadata) {
   chrome.storage.sync.set({ 'iseentit': SYNC_DATA });
 }
 
-function createModal (metadata) {
+function createModal (node, metadata) {
   AUDIO.play();
 
   const container = document.createElement('iseentit');
@@ -102,8 +102,9 @@ function createModal (metadata) {
       return;
     }
     if (e.target.classList.contains('iseentit-btn-seent')) {
-      container.classList.add('iseentit-seent');
+      node.querySelector('.iseentit-fab').classList.add('iseentit-seent');
       upsert(metadata);
+      destroyModal();
       return;
     }
   });
@@ -126,26 +127,26 @@ function destroyModal () {
   });
 }
 
-function extractMetadata (platform, item) {
+function extractMetadata (platform, node) {
   switch (platform) {
     case PLATFORMS.RT:
-      const type = item.querySelector('a').pathname.indexOf('/m/') === 0
+      const type = node.querySelector('a').pathname.indexOf('/m/') === 0
         ? CONTENT_TYPES.FILM : CONTENT_TYPES.SERIES;
       return {
-        node: item,
+        node,
         type,
-        title: item.querySelector('span').textContent,
+        title: node.querySelector('span').textContent,
         // Going to need to fetch the target page and extract year from that
         // or something. Bleh.
         // year: null, // :(
         year: '????',
-        image: item.querySelector('img').src,
+        image: node.querySelector('img').src,
       };
   }
 }
 
-function injectFab (platform, item) {
-  const metadata = extractMetadata(platform, item);
+function injectFab (platform, node) {
+  const metadata = extractMetadata(platform, node);
   const key = makeKeyFromMetadata(metadata);
 
   const fab = document.createElement('iseentit');
@@ -153,10 +154,10 @@ function injectFab (platform, item) {
   fab.classList.add('iseentit-fab');
   if (key in PARSED_DATA[metadata.type]) fab.classList.add('iseentit-seent');
 
-  item.appendChild(fab);
+  node.appendChild(fab);
   fab.addEventListener('click', () => {
     // metadata extracted on click because image assets aren't ready at runtime
-    createModal(extractMetadata(platform, item));
+    createModal(node, extractMetadata(platform, node));
   });
 }
 
