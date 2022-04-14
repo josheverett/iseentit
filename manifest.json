@@ -1,0 +1,14 @@
+{
+  "name": "I SEENT IT",
+  "description": "Keeping track of your movie addiction.",
+  "version": "0.0.1",
+  "manifest_version": 3,
+
+  "content_scripts": [
+    {
+      "matches": ["https://*.rottentomatoes.com/*"],
+      "css": ["iseentit.css"],
+      "js": ["iseentit.js"]
+    }
+  ]
+}
