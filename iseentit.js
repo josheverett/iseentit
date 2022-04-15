@@ -81,18 +81,25 @@ function decodeSyncData (syncData) {
   };
 }
 
-async function upsert (node, metadata) {
-  // RT poster lockups don't include the year. -_-
+// RT poster lockups don't include the year. -_-
+async function _getYear (node, metadata) {
+  if (metadata.year) return metadata.year;
   if (metadata.platform === PLATFORMS.RT) {
     const detailPage = await fetch(node.querySelector('a').href);
     const html = await detailPage.text();
     // yolo
     const matches = new RegExp(/"cag\[release\]":"(\d+)"/, 'g').exec(html);
-    metadata.year = matches[1];
+    return matches[1];
   }
+}
 
+// TODO: Should just pass detail page URL instead of node. I.e. call _getYear
+// from the caller of upsertRecord. upsertRecord should be ignorant of anything
+// but metadata and chrome.storage.sync.
+async function upsertRecord (node, metadata) {
+  const year = await _getYear(node, metadata);
   const oldData = PARSED_DATA[metadata.type][metadata.key];
-  const newData = { ...oldData, ...metadata };
+  const newData = { ...oldData, ...metadata, year };
 
   SYNC_DATA[metadata.type] = SYNC_DATA[metadata.type] || []; // first write case
 
@@ -120,19 +127,28 @@ async function upsert (node, metadata) {
   return await chrome.storage.sync.set({ 'iseentit': SYNC_DATA });
 }
 
+async function deleteRecord (node, metadata) {
+  const year = await _getYear(node, metadata);
+  const existingRecord = SYNC_DATA[metadata.type].find((record) => {
+    return record[0] === year && record[1] === metadata.title;
+  });
+  const index = SYNC_DATA[metadata.type].indexOf(existingRecord);
+  SYNC_DATA[metadata.type].splice(index, 1);
+  return await chrome.storage.sync.set({ 'iseentit': SYNC_DATA });
+}
+
 function createRatingLinks (ratings) {
   return ratings.map((rating, i) => {
     return `<iseentit class="iseentit-link" data-rating="${i + 1}">${rating}</iseentit>`;
   }).reverse().join('');
 }
 
-function createModal (node, metadata) {
+function createModal (node, metadata, isSeent) {
   AUDIO.play();
 
   const container = document.createElement('iseentit');
   container.className = 'iseentit-modal-container';
   container.dataset.selectedScreen = 1;
-  // TODO: "unseent" --> delete record
   container.innerHTML = `
     <iseentit class="iseentit-modal">
       <iseentit
@@ -149,7 +165,9 @@ function createModal (node, metadata) {
             ${metadata.title}
             <!-- iseentit class="iseentit-year">(${metadata.year})</iseentit -->
           </iseentit>
-          <iseentit class="iseentit-btn iseentit-btn-seent">I seent it!</iseentit>
+          <iseentit class="iseentit-btn iseentit-btn-${isSeent ? 'delete' : 'seent'}">
+            ${isSeent ? 'Delete' : 'I seent it!'}
+          </iseentit>
           <iseentit class="iseentit-btn iseentit-btn-rate">Rate</iseentit>
         </iseentit>
         <iseentit class="iseentit-screen" data-screen="2">
@@ -164,16 +182,26 @@ function createModal (node, metadata) {
     </iseentit>
   `;
 
-  container.addEventListener('click', (e) => {
+  container.addEventListener('click', async (e) => {
     if (e.target === container) {
       destroyModal();
       return;
     }
 
+    if (e.target.classList.contains('iseentit-btn-delete')) {
+      node.querySelector('#iseentit-fab').className = 'iseentit-fab';
+      await deleteRecord(node, metadata);
+      // Deletion should be a rare case, like when you mark something seent by
+      // accident. So just reload the page, that way the data doesn't have to
+      // be rehydrated and fabs don't have to rerender. This ain't react bro
+      // this some vinalla shit.
+      window.location.reload();
+      return;
+    }
+
     if (e.target.classList.contains('iseentit-btn-seent')) {
       node.querySelector('#iseentit-fab').className = 'iseentit-seent';
-      // explicitly not await'ing (for UX)
-      upsert(node, metadata);
+      upsertRecord(node, metadata); // explicitly not await'ing (for UX)
       destroyModal();
       return;
     }
@@ -191,7 +219,7 @@ function createModal (node, metadata) {
       node.querySelector('#iseentit-fab').className = 'iseentit-rated';
       RATINGS.artisticMerit = e.target.dataset.rating;
       // explicitly not await'ing (for UX)
-      upsert(node, { ...metadata, ...RATINGS });
+      upsertRecord(node, { ...metadata, ...RATINGS });
       destroyModal();
     }
   });
@@ -270,10 +298,15 @@ function injectFab (platform, format, node) {
 
   fab.addEventListener('click', () => {
     // Metadata extracted on click because image assets aren't ready at runtime.
-    createModal(node, extractMetadata(platform, format, node));
+    createModal(node, extractMetadata(platform, format, node), isSeent);
   });
 }
 
+// TODO: This whole PARSED_DATA thing to get a hashtable lookup is stupid.
+// We're working on the order of at most ~2000 items, so just calling a method
+// that does a simple Array.find() is more than sufficient. This was a
+// premature optimization. It's very useful to parse the condensed data storage
+// format to JSON blobs, but it should stay an array. Useless complexity.
 chrome.storage.sync.get('iseentit', function (data) {
   SYNC_DATA = data.iseentit || { FILM: [], SERIES: [] };
   PARSED_DATA = decodeSyncData(SYNC_DATA);

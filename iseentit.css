@@ -218,6 +218,7 @@ iseentit {
 [data-rating="1"]:before { opacity: 0.30; }
 
 .iseentit-btn-seent,
+.iseentit-btn-delete,
 .iseentit-link,
 .iseentit-seent,
 .iseentit-rated {
