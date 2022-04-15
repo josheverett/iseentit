@@ -23,6 +23,10 @@ iseentit {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+#iseentit-fab {
+  z-index: 1; /* Solves 90% of default stacking context issues. */
+}
+
 .iseentit-fab {
   position: absolute;
   top: 10px;
