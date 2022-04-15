@@ -1,11 +1,11 @@
 @keyframes iseentit-poster {
   0% {
-    top: -75px;
+    top: -70px;
     opacity: 0;
     transform: scale(0.5) rotate(30deg);
   }
   100% {
-    top: -25px;
+    top: -20px;
     opacity: 1;
     transform: scale(1) rotate(10deg);
   }
