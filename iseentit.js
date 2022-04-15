@@ -93,11 +93,29 @@ async function upsert (node, metadata) {
 
   const oldData = PARSED_DATA[metadata.type][metadata.key];
   const newData = { ...oldData, ...metadata };
-  SYNC_DATA[metadata.type] = SYNC_DATA[metadata.type] || [];
-  SYNC_DATA[metadata.type].push([
+
+  SYNC_DATA[metadata.type] = SYNC_DATA[metadata.type] || []; // first write case
+
+  let recordToUpdate;
+  const existingRecord = SYNC_DATA[metadata.type].find((record) => {
+    return record[0] === newData.year && record[1] === newData.title;
+  });
+  if (existingRecord) {
+    recordToUpdate = existingRecord;
+  } else {
+    recordToUpdate = [];
+    SYNC_DATA[metadata.type].push(recordToUpdate);
+  }
+
+  // Abusing js references here to avoid having to take PARSED_DATA and encode
+  // it into a SYNC_DATA object, or otherwise get cute with array splicing etc.
+  // This way the SYNC_DATA record just gets updated in place and both the
+  // insert/update cases get poked the same way.
+  recordToUpdate.length = 0;
+  recordToUpdate.push(
     newData.year, newData.title,
     newData.rewatchability || 0, newData.artisticMerit || 0
-  ]);
+  );
 
   return await chrome.storage.sync.set({ 'iseentit': SYNC_DATA });
 }
