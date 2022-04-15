@@ -272,9 +272,6 @@ function _getImdbType (format, node) {
 
 function extractMetadata (platform, format, node) {
   switch (platform) {
-    // TODO: Only working with LISTER format at the moment. For RT different
-    // formats were easy to handle below, but for IMDB a second switch statement
-    // may be needed etc.
     case PLATFORMS.IMDB: {
       const type = _getImdbType(format, node);
       const title =
