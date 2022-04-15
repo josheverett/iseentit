@@ -18,7 +18,10 @@
 
   "content_scripts": [
     {
-      "matches": ["https://*.rottentomatoes.com/*"],
+      "matches": [
+        "https://*.imdb.com/*",
+        "https://*.rottentomatoes.com/*"
+      ],
       "css": ["iseentit.css"],
       "js": ["iseentit.js"]
     }
@@ -27,7 +30,10 @@
   "web_accessible_resources": [
     {
       "resources": ["iseentit.png", "iseentit.mp3"],
-      "matches": ["https://*.rottentomatoes.com/*"]
+      "matches": [
+        "https://*.imdb.com/*",
+        "https://*.rottentomatoes.com/*"
+      ]
     }
   ]
 }

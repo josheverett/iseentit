@@ -7,12 +7,15 @@ const CONTENT_TYPES = {
 };
 
 const PLATFORMS = {
-  RT: 'RT',
   IMDB: 'IMDB',
+  RT: 'RT',
 };
 
 // FORMATS[platform][format] --> CSS selector
 const FORMATS = {
+  IMDB: {
+    LISTER: '.lister-item', // "lister" UX, e.g. /search/title/?genres=sci-fi
+  },
   RT: {
     BROWSE: '.mb-movie, .media-list__item', // /browse/ pages
     DETAIL: '.thumbnail-scoreboard-wrap', // detail page
@@ -21,8 +24,8 @@ const FORMATS = {
 };
 
 const HOSTS_TO_PLATFORMS = {
-  'www.rottentomatoes.com': PLATFORMS.RT,
   'www.imdb.com': PLATFORMS.IMDB,
+  'www.rottentomatoes.com': PLATFORMS.RT,
 };
 
 const RATINGS_STRINGS = {
@@ -248,7 +251,28 @@ function destroyModal () {
 
 function extractMetadata (platform, format, node) {
   switch (platform) {
-    case PLATFORMS.RT:
+    // TODO: Only working with LISTER format at the moment. For RT different
+    // formats were easy to handle below, but for IMDB a second switch statement
+    // may be needed etc.
+    case PLATFORMS.IMDB: {
+      const type =
+        node.querySelector('.certificate').textContent.indexOf('TV-') === 0
+        ? CONTENT_TYPES.SERIES : CONTENT_TYPES.FILM;
+      const title = node.querySelector('.lister-item-header a').textContent;
+      const year = node.querySelector('.lister-item-year')
+        .textContent.match(/\((\d+)/)[1];
+      const metadata = {
+        node,
+        platform,
+        type,
+        title,
+        year,
+        image: node.querySelector('img').src,
+      };
+      metadata.key = makeKeyFromMetadata(metadata);
+      return metadata;
+    }
+    case PLATFORMS.RT: {
       const type = node.querySelector('a').pathname.indexOf('/m/') === 0
         ? CONTENT_TYPES.FILM : CONTENT_TYPES.SERIES;
       const title = node.querySelector(
@@ -263,6 +287,7 @@ function extractMetadata (platform, format, node) {
       };
       metadata.key = makeKeyFromMetadata(metadata);
       return metadata;
+    }
   }
 }
 
