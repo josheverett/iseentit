@@ -11,14 +11,12 @@ const PLATFORMS = {
   IMDB: 'IMDB',
 };
 
-// FORMATS[platform][format] --> CSS selector for format
+// FORMATS[platform][format] --> CSS selector
 const FORMATS = {
   RT: {
-    // /browse/ pages
-    BROWSE: '.mb-movie, .media-list__item',
-    // "YOU MIGHT ALSO LIKE"
-    YMAL: 'tiles-carousel-responsive-item',
-    // TODO: detail page
+    BROWSE: '.mb-movie, .media-list__item', // /browse/ pages
+    DETAIL: '.thumbnail-scoreboard-wrap', // detail page
+    YMAL: 'tiles-carousel-responsive-item', // "YOU MIGHT ALSO LIKE"
   },
 };
 
