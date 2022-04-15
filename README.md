@@ -136,5 +136,5 @@ way to do so:
 * Better content type handling for IMDB (must use scraping a la Rotten Tomatoes).
 * Support text-based filmography lists (needs a mini UI treatment).
 * Options page: Data import/export (CSV).
-* Options page: Sorting and filtering.
+* Options page: Basic stats such as counts of seent and rated.
 * S C A T T E R P L O T S

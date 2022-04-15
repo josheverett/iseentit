@@ -41,6 +41,14 @@ function sortItems (items) {
   return [...items].sort(sortFn);
 }
 
+// this is the most yolo shit ever TRY AND STOP ME
+function filterItems (query) {
+  $('#yolo').innerHTML = !query ? '' : `
+    tbody tr { display: none; }
+    tbody tr[data-filter*="${query}"] { display: table-row; }
+  `;
+}
+
 function renderTable (tab, items) {
   const node = $(`.tab-pane[data-tab="${tab}"]`);
   node.innerHTML = `
@@ -56,7 +64,7 @@ function renderTable (tab, items) {
       <tbody>
         ${sortItems(items).map((item) => {
           return `
-            <tr>
+            <tr data-filter="${(item.year + item.title).toLowerCase()}">
               <td>${item.year}</td>
               <td>${item.title}</td>
               <td>${item.rewatchability}</td>
@@ -83,6 +91,9 @@ $('.tabs').addEventListener('click', (e) => {
 });
 
 $('#sort').addEventListener('change', renderTables);
+$('#filter').addEventListener('keyup', (e) => {
+  filterItems(e.target.value.toLowerCase().trim());
+});
 
 $('.btn-clear').addEventListener('click', (e) => {
   const shouldClear = window.confirm(
