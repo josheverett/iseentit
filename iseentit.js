@@ -96,7 +96,7 @@ async function _getYear (node, metadata) {
     const detailPage = await fetch(fetchTarget);
     const html = await detailPage.text();
     // yolo
-    const matches = new RegExp(/"cag\[release\]":"(\d+)"/, 'g').exec(html);
+    const matches = new RegExp(/"cag\[release\]":"?(\d+)/, 'g').exec(html);
     return matches[1];
   }
 }
