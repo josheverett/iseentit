@@ -153,7 +153,7 @@ function createModal (node, metadata) {
     }
 
     if (e.target.classList.contains('iseentit-btn-seent')) {
-      node.querySelector('.iseentit-fab').classList.add('iseentit-seent');
+      node.querySelector('#iseentit-fab').className = 'iseentit-seent';
       // explicitly not await'ing (for UX)
       upsert(node, metadata);
       destroyModal();
@@ -170,7 +170,7 @@ function createModal (node, metadata) {
       RATINGS.rewatchability = e.target.dataset.rating;
       container.dataset.selectedScreen = 3;
     } else {
-      node.querySelector('.iseentit-fab').classList.add('iseentit-seent');
+      node.querySelector('#iseentit-fab').className = 'iseentit-rated';
       RATINGS.artisticMerit = e.target.dataset.rating;
       // explicitly not await'ing (for UX)
       upsert(node, { ...metadata, ...RATINGS });
@@ -239,6 +239,7 @@ function injectFab (platform, format, node) {
   }
 
   const fab = document.createElement('iseentit');
+  fab.id = 'iseentit-fab';
   if (isRated) {
     fab.classList.add('iseentit-rated');
   } else if (isSeent) {

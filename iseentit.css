@@ -221,7 +221,7 @@ iseentit {
 .iseentit-link,
 .iseentit-seent,
 .iseentit-rated {
-  background: linear-gradient(hsl(20deg 60% 55%), hsl(20deg 60% 50%));
+  background: linear-gradient(hsl(20deg 60% 55%), hsl(20deg 60% 50%)) !important; /* yolo */
 }
 
 .iseentit-seent,
