@@ -11,7 +11,9 @@
   }
 }
 
-tiles-carousel-responsive-item {
+tiles-carousel-responsive-item,
+.mb-movie,
+.media-list__item {
   position: relative; /* It had to be done. #DrStrange #YOLO */
 }
 

@@ -11,6 +11,17 @@ const PLATFORMS = {
   IMDB: 'IMDB',
 };
 
+// FORMATS[platform][format] --> CSS selector for format
+const FORMATS = {
+  RT: {
+    // /browse/ pages
+    BROWSE: '.mb-movie, .media-list__item',
+    // "YOU MIGHT ALSO LIKE"
+    YMAL: 'tiles-carousel-responsive-item',
+    // TODO: detail page
+  },
+};
+
 const HOSTS_TO_PLATFORMS = {
   'www.rottentomatoes.com': PLATFORMS.RT,
   'www.imdb.com': PLATFORMS.IMDB,
@@ -42,13 +53,6 @@ const RATINGS = { rewatchability: 0, artisticMerit: 0 }; // yolo
 // PARSED_DATA_BY_TITLE necessary due to combination of RT not including year in
 // poster lockups + being severely constrained on storage.
 let SYNC_DATA, PARSED_DATA, PARSED_DATA_BY_TITLE;
-
-const ITEM_DECORATORS = {};
-
-ITEM_DECORATORS.RT = function () {
-  $$('tiles-carousel-responsive-item')
-    .forEach(injectFab.bind(null, PLATFORMS.RT));
-};
 
 function makeKeyFromMetadata (metadata) {
   return metadata.year + ':' + metadata.title;
@@ -192,16 +196,18 @@ function destroyModal () {
   });
 }
 
-function extractMetadata (platform, node) {
+function extractMetadata (platform, format, node) {
   switch (platform) {
     case PLATFORMS.RT:
       const type = node.querySelector('a').pathname.indexOf('/m/') === 0
         ? CONTENT_TYPES.FILM : CONTENT_TYPES.SERIES;
+      const title = node.querySelector(
+        '[class*="Title"], [class*="title"], .p--small').textContent;
       const metadata = {
         node,
         platform,
         type,
-        title: node.querySelector('span').textContent,
+        title,
         year: null, // RT doesn't have the year on poster lockups.
         image: node.querySelector('img').src,
       };
@@ -210,8 +216,8 @@ function extractMetadata (platform, node) {
   }
 }
 
-function injectFab (platform, node) {
-  const metadata = extractMetadata(platform, node);
+function injectFab (platform, format, node) {
+  const metadata = extractMetadata(platform, format, node);
 
   const fab = document.createElement('iseentit');
   fab.style.backgroundImage = `url("${AVATAR_URL}")`;
@@ -230,7 +236,7 @@ function injectFab (platform, node) {
   node.appendChild(fab);
   fab.addEventListener('click', () => {
     // Metadata extracted on click because image assets aren't ready at runtime.
-    createModal(node, extractMetadata(platform, node));
+    createModal(node, extractMetadata(platform, format, node));
   });
 }
 
@@ -246,6 +252,7 @@ chrome.storage.sync.get('iseentit', function (data) {
   });
 
   const platform = HOSTS_TO_PLATFORMS[window.location.host];
-  const itemDecorator = ITEM_DECORATORS[platform];
-  itemDecorator();
+  for (const [format, selector] of Object.entries(FORMATS[platform])) {
+    $$(selector).forEach(injectFab.bind(null, platform, format));
+  }
 });
