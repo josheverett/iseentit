@@ -217,23 +217,38 @@ function extractMetadata (platform, format, node) {
 }
 
 function injectFab (platform, format, node) {
+  const _isRated = (m) => m && m.rewatchability > 0 && m.artisticMerit > 0;
+
   const metadata = extractMetadata(platform, format, node);
 
-  const fab = document.createElement('iseentit');
-  fab.style.backgroundImage = `url("${AVATAR_URL}")`;
-  fab.classList.add('iseentit-fab');
-
   let isSeent = false;
+  let isRated = false;
   switch (platform) {
     case PLATFORMS.RT:
+      // This is necessary for RT because their poster lockups do not include
+      // the year. So if you've seent Metropolis (1927), but you encounter a
+      // lockup for Metroplis (2001), the latter will be incorrectly marked
+      // seent. Not a huge deal, but since IMDB does include year in their
+      // lockups there's no reason to allow this bug outside of RT.
       isSeent = metadata.title in PARSED_DATA_BY_TITLE;
+      isRated = _isRated(PARSED_DATA_BY_TITLE[metadata.title]);
       break;
     default:
       isSeent = metadata.key in PARSED_DATA[metadata.type];
+      isRated = _isRated(PARSED_DATA[metadata.type][metadata.key]);
   }
-  if (isSeent) fab.classList.add('iseentit-seent');
 
+  const fab = document.createElement('iseentit');
+  if (isRated) {
+    fab.classList.add('iseentit-rated');
+  } else if (isSeent) {
+    fab.classList.add('iseentit-seent');
+  } else {
+    fab.classList.add('iseentit-fab');
+    fab.style.backgroundImage = `url("${AVATAR_URL}")`;
+  }
   node.appendChild(fab);
+
   fab.addEventListener('click', () => {
     // Metadata extracted on click because image assets aren't ready at runtime.
     createModal(node, extractMetadata(platform, format, node));
