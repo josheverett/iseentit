@@ -250,16 +250,24 @@ function destroyModal () {
   });
 }
 
+// This isn't even yolo territory. This is just terrible. But it works.
+// TODO: This can be "properly" solved like `year` was for RT.
 function _getImdbType (format, node) {
+  let type;
   switch (format) {
     case FORMATS.IMDB.LISTER:
-      return node.querySelector('.certificate').textContent.indexOf('TV-') === 0
+      type = node.querySelector('.certificate')?.textContent.indexOf('TV-') === 0
         ? CONTENT_TYPES.SERIES : CONTENT_TYPES.FILM;
+        break;
     case FORMATS.IMDB.LISTER_MINI:
-      // This isn't even yolo territory. This is just terrible. But it works.
-      return node.querySelector('a').href.indexOf('tv') > -1
+      type = node.querySelector('a').href.indexOf('tv') > -1
         ? CONTENT_TYPES.SERIES : CONTENT_TYPES.FILM;
+        break;
   }
+  // If nothing worked check the URL for "series".
+  if (type) return type;
+  return window.location.href.indexOf('series') > -1
+    ? CONTENT_TYPES.SERIES : CONTENT_TYPES.FILM;
 }
 
 function extractMetadata (platform, format, node) {
