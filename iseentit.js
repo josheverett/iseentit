@@ -85,7 +85,11 @@ function decodeSyncData (syncData) {
 async function _getYear (node, metadata) {
   if (metadata.year) return metadata.year;
   if (metadata.platform === PLATFORMS.RT) {
-    const detailPage = await fetch(node.querySelector('a').href);
+    const linkTarget = node.querySelector('a').href;
+    // Presence of query string in links means we're on the detail page already.
+    const fetchTarget = linkTarget.indexOf('?') > -1
+      ? window.location.href : linkTarget;
+    const detailPage = await fetch(fetchTarget);
     const html = await detailPage.text();
     // yolo
     const matches = new RegExp(/"cag\[release\]":"(\d+)"/, 'g').exec(html);
