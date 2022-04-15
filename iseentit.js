@@ -148,7 +148,7 @@ function createModal (node, metadata) {
     </iseentit>
   `;
 
-  container.addEventListener('click', async (e) => {
+  container.addEventListener('click', (e) => {
     if (e.target === container) {
       destroyModal();
       return;
@@ -156,7 +156,8 @@ function createModal (node, metadata) {
 
     if (e.target.classList.contains('iseentit-btn-seent')) {
       node.querySelector('.iseentit-fab').classList.add('iseentit-seent');
-      await upsert(node, metadata);
+      // explicitly not await'ing (for UX)
+      upsert(node, metadata);
       destroyModal();
       return;
     }
@@ -173,7 +174,8 @@ function createModal (node, metadata) {
     } else {
       node.querySelector('.iseentit-fab').classList.add('iseentit-seent');
       RATINGS.artisticMerit = e.target.dataset.rating;
-      await upsert(node, { ...metadata, ...RATINGS });
+      // explicitly not await'ing (for UX)
+      upsert(node, { ...metadata, ...RATINGS });
       destroyModal();
     }
   });
