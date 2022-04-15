@@ -15,6 +15,7 @@ const PLATFORMS = {
 const FORMATS = {
   IMDB: {
     LISTER: '.lister-item', // "lister" UX, e.g. /search/title/?genres=sci-fi
+    LISTER_MINI: '.lister-list > tr', // compact "lister" UX, e.g. Top 250
   },
   RT: {
     BROWSE: '.mb-movie, .media-list__item', // /browse/ pages
@@ -249,17 +250,29 @@ function destroyModal () {
   });
 }
 
+function _getImdbType (format, node) {
+  switch (format) {
+    case FORMATS.IMDB.LISTER:
+      return node.querySelector('.certificate').textContent.indexOf('TV-') === 0
+        ? CONTENT_TYPES.SERIES : CONTENT_TYPES.FILM;
+    case FORMATS.IMDB.LISTER_MINI:
+      // This isn't even yolo territory. This is just terrible. But it works.
+      return node.querySelector('a').href.indexOf('tv') > -1
+        ? CONTENT_TYPES.SERIES : CONTENT_TYPES.FILM;
+  }
+}
+
 function extractMetadata (platform, format, node) {
   switch (platform) {
     // TODO: Only working with LISTER format at the moment. For RT different
     // formats were easy to handle below, but for IMDB a second switch statement
     // may be needed etc.
     case PLATFORMS.IMDB: {
-      const type =
-        node.querySelector('.certificate').textContent.indexOf('TV-') === 0
-        ? CONTENT_TYPES.SERIES : CONTENT_TYPES.FILM;
-      const title = node.querySelector('.lister-item-header a').textContent;
-      const year = node.querySelector('.lister-item-year')
+      const type = _getImdbType(format, node);
+      const title =
+        node.querySelector('.lister-item-header a, .titleColumn a').textContent;
+      const year =
+        node.querySelector('.lister-item-year, .titleColumn .secondaryInfo')
         .textContent.match(/\((\d+)/)[1];
       const metadata = {
         node,
@@ -348,7 +361,10 @@ chrome.storage.sync.get('iseentit', function (data) {
   });
 
   const platform = HOSTS_TO_PLATFORMS[window.location.host];
-  for (const [format, selector] of Object.entries(FORMATS[platform])) {
-    $$(selector).forEach(injectFab.bind(null, platform, format));
+  for (const [_format, selector] of Object.entries(FORMATS[platform])) {
+    // This should have been a proper enum-like structure with a separate map
+    // for selectors but whatever same thing.
+    // $$(selector).forEach(injectFab.bind(null, platform, format));
+    $$(selector).forEach(injectFab.bind(null, platform, selector));
   }
 });

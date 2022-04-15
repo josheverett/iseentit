@@ -13,7 +13,8 @@
 
 tiles-carousel-responsive-item,
 .mb-movie,
-.media-list__item {
+.media-list__item,
+.lister-list > tr {
   position: relative; /* It had to be done. #DrStrange #YOLO */
 }
 
