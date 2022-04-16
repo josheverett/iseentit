@@ -52,37 +52,51 @@ const AUDIO = new Audio(chrome.runtime.getURL('iseentit.mp3'));
 
 const RATINGS = { rewatchability: 0, artisticMerit: 0 }; // yolo
 
-// PARSED_DATA_BY_TITLE necessary due to combination of RT not including year in
-// poster lockups + being severely constrained on storage.
+// PARSED_DATA_BY_TITLE necessary because RT does not include the year in
+// their poster lockups.
 let SYNC_DATA, PARSED_DATA, PARSED_DATA_BY_TITLE;
 
-function makeKeyFromMetadata (metadata) {
-  return metadata.year + ':' + metadata.title;
+function getSavedMetadata (title, year) {
+  return PARSED_DATA.find(m => m.title === title && m.year === year);
 }
 
 /**
  * Stored data format: [1999, "The Green Mile", 5, 5]
  * I.e. [year, title, rewatchability, artistic merit]
+ *
  * This condensed data format is due to chrome.storage.sync's 100kb limit.
  * With this format ~2000 movies/shows can be stored. That sounds like a lot
  * but my very incomplete and manually curated list is already approaching
  * 1000 movies.
+ *
+ * TODO: This can be improved further by bucketing movies by year. E.g.:
+ *
+ * {
+ *   FILM: {
+ *     1999: [
+ *       ["The Green Mile", 5, 5]
+ *     ]
+ *   },
+ *   SERIES: { ... }
+ * }
+ *
+ * For a small number of films this takes up more space, but for 1000 films this
+ * takes up way less space. The byte savings asymptotically approaches 4 bytes
+ * per movie as the number of movies increases. This would be a breaking change,
+ * so would need to bump to v2 but could in theory detect the old data format
+ * and translate to the new format automagically. I expect to exceed the current
+ * ~2000 movie limit at some point so this is actually worth doing.
  */
 function decodeSyncData (syncData) {
-  const reduceItemArrayToMetadataMap = (type, items=[]) => {
-    return items.reduce((memo, item) => {
+  const itemsToMetadata = (type, items=[]) => {
+    return items.map((item) => {
       const [year, title, rewatchability, artisticMerit] = item;
-      const val = {type, year, title, rewatchability, artisticMerit};
-      const key = makeKeyFromMetadata(val);
-      val.key = key;
-      memo[key] = val;
-      return memo;
-    }, {});
+      return { type, year, title, rewatchability, artisticMerit };
+    });
   };
-  return {
-    FILM: reduceItemArrayToMetadataMap(CONTENT_TYPES.FILM, syncData.FILM),
-    SERIES: reduceItemArrayToMetadataMap(CONTENT_TYPES.SERIES, syncData.SERIES),
-  };
+
+  return itemsToMetadata(CONTENT_TYPES.FILM, syncData.FILM)
+    .concat(itemsToMetadata(CONTENT_TYPES.SERIES, syncData.SERIES));
 }
 
 async function fetchMetadataFromDetailPage (platform, node) {
@@ -122,22 +136,33 @@ async function fetchMetadataFromDetailPage (platform, node) {
 }
 
 async function upsertRecord (node, metadata) {
-  const existingMetadata = PARSED_DATA[metadata.type][metadata.key];
   const detailMetadata =
     await fetchMetadataFromDetailPage(metadata.platform, node);
-  const newMetadata = { ...detailMetadata, ...existingMetadata, ...metadata };
+  const existingMetadata =
+    getSavedMetadata(detailMetadata.title, detailMetadata.year);
+  const newMetadata = {
+    ...detailMetadata,
+    ...existingMetadata,
+    ...metadata,
+    // year will be missing for RT, and the spread operator will overwrite the
+    // corret year from detailMetadata, so just re-stuff the year back in at
+    // the end. yolo
+    // NOTE: Important to cast as string.
+    year: String(detailMetadata.year),
+  };
 
-  SYNC_DATA[metadata.type] = SYNC_DATA[metadata.type] || []; // first write case
+  // first write case
+  SYNC_DATA[newMetadata.type] = SYNC_DATA[newMetadata.type] || [];
 
   let recordToUpdate;
-  const existingRecord = SYNC_DATA[metadata.type].find((record) => {
+  const existingRecord = SYNC_DATA[newMetadata.type].find((record) => {
     return record[0] === newMetadata.year && record[1] === newMetadata.title;
   });
   if (existingRecord) {
     recordToUpdate = existingRecord;
   } else {
     recordToUpdate = [];
-    SYNC_DATA[metadata.type].push(recordToUpdate);
+    SYNC_DATA[newMetadata.type].push(recordToUpdate);
   }
 
   // Abusing js references here to avoid having to take PARSED_DATA and encode
@@ -298,9 +323,7 @@ function extractMetadata (platform, format, node) {
       break;
   }
   const image = node.querySelector('img').src;
-  const metadata = { node, platform, title, year, image };
-  metadata.key = makeKeyFromMetadata(metadata);
-  return metadata;
+  return { node, platform, title, year, image };
 }
 
 function injectFab (platform, format, node) {
@@ -321,8 +344,9 @@ function injectFab (platform, format, node) {
       isRated = _isRated(PARSED_DATA_BY_TITLE[metadata.title]);
       break;
     default:
-      isSeent = metadata.key in PARSED_DATA[metadata.type];
-      isRated = _isRated(PARSED_DATA[metadata.type][metadata.key]);
+      const existingMetadata = getSavedMetadata(metadata.title, metadata.year);
+      isSeent = !!existingMetadata;
+      isRated = _isRated(existingMetadata);
   }
 
   const fab = document.createElement('iseentit');
@@ -352,12 +376,10 @@ chrome.storage.sync.get('iseentit', function (data) {
   SYNC_DATA = data.iseentit || { FILM: [], SERIES: [] };
   PARSED_DATA = decodeSyncData(SYNC_DATA);
 
-  PARSED_DATA_BY_TITLE = {};
-  Object.keys(PARSED_DATA).forEach((contentType) => {
-    for (const [_, metadata] of Object.entries(PARSED_DATA[contentType])) {
-      PARSED_DATA_BY_TITLE[metadata.title] = metadata;
-    }
-  });
+  PARSED_DATA_BY_TITLE = PARSED_DATA.reduce((memo, metadata) => {
+    memo[metadata.title] = metadata;
+    return memo;
+  }, {});
 
   const platform = HOSTS_TO_PLATFORMS[window.location.host];
   for (const [_format, selector] of Object.entries(FORMATS[platform])) {
