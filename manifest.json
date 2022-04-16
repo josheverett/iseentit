@@ -1,7 +1,7 @@
 {
   "name": "I SEENT IT!",
   "description": "Keeping track of your movie addiction.",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "manifest_version": 3,
 
   "icons": {
