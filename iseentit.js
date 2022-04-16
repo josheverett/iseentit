@@ -218,11 +218,12 @@ async function upsertRecord (node, metadata) {
 async function deleteRecord (node, metadata) {
   const detailMetadata =
     await fetchMetadataFromDetailPage(metadata.platform, node);
-  const existingRecord = SYNC_DATA[metadata.type].find((record) => {
-    return record[0] === detailMetadata.year && record[1] === metadata.title;
+  const existingRecord = SYNC_DATA[detailMetadata.type].find((record) => {
+    return (
+      record[0] === detailMetadata.year && record[1] === detailMetadata.title);
   });
-  const index = SYNC_DATA[metadata.type].indexOf(existingRecord);
-  SYNC_DATA[metadata.type].splice(index, 1);
+  const index = SYNC_DATA[detailMetadata.type].indexOf(existingRecord);
+  SYNC_DATA[detailMetadata.type].splice(index, 1);
   return await chrome.storage.sync.set({ 'iseentit': SYNC_DATA });
 }
 
