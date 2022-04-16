@@ -103,7 +103,36 @@ $('#filter').addEventListener('keyup', (e) => {
   filterItems(e.target.value.toLowerCase().trim());
 });
 
-$('.btn-clear').addEventListener('click', (e) => {
+$('.btn-export').addEventListener('click', () => {
+  const syncItemsToCsv = (type, items) => {
+    return items.map((item) => {
+      const year = item[0];
+      const title = item[1];
+      const rewatchability = item[2];
+      const artisticMerit = item[3];
+      const hasDoubleQuote = title.includes(`"`);
+      const quoteStyle = hasDoubleQuote ? `'` : `"`;
+      const _title = `${quoteStyle}${title}${quoteStyle}`;
+      return [type, year, _title, rewatchability || 0, artisticMerit || 0]
+        .join(',');
+    });
+  };
+
+  const rows = syncItemsToCsv(CONTENT_TYPES.FILM, SYNC_DATA.FILM)
+    .concat(syncItemsToCsv(CONTENT_TYPES.FILM.SERIES, SYNC_DATA.SERIES));
+  rows.unshift('Type,Year,Title,Rewatchability,Artistic Merit');
+  const csv = rows.join('\n');
+
+  const YYYYMMDD = new Date().toISOString().split('T')[0];
+  const link = document.createElement('a');
+  link.setAttribute('hidden', true);
+  link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURI(csv));
+  link.setAttribute('download', `iseentit-export-${YYYYMMDD}.csv`);
+  document.body.appendChild(link);
+  link.click();
+});
+
+$('.btn-clear').addEventListener('click', () => {
   const shouldClear = window.confirm(
     'Your I SEENT IT! data is synced to your Chrome profile. Deleting this ' +
     'data will delete it from all of your devices. Are you sure you want to ' +

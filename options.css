@@ -62,9 +62,12 @@ tbody td:nth-of-type(4) {
   padding: 10px;
   border: 1px solid #999999;
   background: #cccccc;
-  opacity: 0.6;
   cursor: pointer;
   transition: 200ms;
+}
+
+.tab {
+  opacity: 0.6;
 }
 
 .btn:hover,
