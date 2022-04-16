@@ -134,5 +134,4 @@ way to do so:
 ## TODOs
 
 * Support text-based filmography lists (needs a mini UI treatment).
-* Options page: Data import/export (CSV).
 * S C A T T E R P L O T S

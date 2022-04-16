@@ -108,13 +108,10 @@ $('.btn-export').addEventListener('click', () => {
     return items.map((item) => {
       const year = item[0];
       const title = item[1];
-      const rewatchability = item[2];
-      const artisticMerit = item[3];
-      const hasDoubleQuote = title.includes(`"`);
-      const quoteStyle = hasDoubleQuote ? `'` : `"`;
-      const _title = `${quoteStyle}${title}${quoteStyle}`;
-      return [type, year, _title, rewatchability || 0, artisticMerit || 0]
-        .join(',');
+      const rewatchability = item[2] || 0;
+      const artisticMerit = item[3] || 0;
+      const _title = `"${title.replace(/"/g, '\\"')}"`;
+      return [type, year, _title, rewatchability, artisticMerit].join(',');
     });
   };
 
@@ -130,6 +127,41 @@ $('.btn-export').addEventListener('click', () => {
   link.setAttribute('download', `iseentit-export-${YYYYMMDD}.csv`);
   document.body.appendChild(link);
   link.click();
+});
+
+$('#file').addEventListener('change', async (e) => {
+  const raw = await e.target.files[0].text();
+  const rows = raw.split('\n');
+  const toImport = rows.reduce((memo, row) => {
+    const data = row.split(/,(?=[\d"])/);
+    // Filters out the header row and obviously invalid rows.
+    const shouldImport = !!data[0].match(/["']?(FILM|SERIES)/);
+    if (shouldImport) {
+      memo.push(
+        data.map((cell) => {
+          // how is babby formed?
+          return cell.match(/^\d+$/)
+            ? parseInt(cell, 10)
+            : cell.replace(/(^"|"$)/g, '').replace(/\\/g, '');
+        })
+      );
+    }
+    return memo;
+  }, []);
+
+  toImport.forEach((row) => {
+    const [type, year, title, rewatchability, artisticMerit] = row;
+    SYNC_DATA[type].push(
+      [year, title, rewatchability || 0, artisticMerit || 0]
+    );
+  });
+
+  await chrome.storage.sync.set({ 'iseentit': SYNC_DATA });
+  window.location.reload();
+});
+
+$('.btn-import').addEventListener('click', () => {
+  $('#file').click();
 });
 
 $('.btn-clear').addEventListener('click', () => {
