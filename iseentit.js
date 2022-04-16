@@ -64,6 +64,12 @@ const RATINGS = { rewatchability: 0, artisticMerit: 0 }; // yolo
 // their poster lockups.
 let SYNC_DATA, PARSED_DATA, PARSED_DATA_BY_TITLE;
 
+function decodeHtml (html) {
+  var textarea = document.createElement('textarea');
+  textarea.innerHTML = html;
+  return textarea.value;
+}
+
 function getSavedMetadata (title, year) {
   if (!title || !year) return undefined;
   return PARSED_DATA.find(m => m.title === title && m.year === year);
@@ -373,6 +379,7 @@ function extractMetadata (platform, format, node) {
       }
       break;
   }
+  title = decodeHtml(title);
   const image = node.querySelector('img').src;
   return { node, platform, title, year, image };
 }
