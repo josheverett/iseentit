@@ -18,9 +18,10 @@ const PLATFORMS = {
 // RT homepage, but it "just works". yolo
 const FORMATS = {
   IMDB: {
-    HOMEPAGE: '.ipc-poster-card', // homepage (poster-only) carousels
+    DETAIL: '[data-testid="hero-media__poster"]', // detail page
     LISTER: '.lister-item', // "lister" UX, e.g. /search/title/?genres=sci-fi
     LISTER_MINI: '.lister-list > tr', // compact "lister" UX, e.g. Top 250
+    SHOVELER: '[data-testid="shoveler"] .ipc-poster-card', // "shoveler" carousels
   },
   RT: {
     BROWSE: '.mb-movie, .media-list__item', // /browse/ pages
@@ -112,6 +113,10 @@ function getJsonLd (doc) {
   return JSON.parse(script.innerHTML);
 }
 
+function releaseDateToYear (releaseDate) {
+  return new Date(Date.parse(releaseDate)).getFullYear();
+}
+
 async function fetchMetadataFromDetailPage (platform, node) {
   // All lockups on IMDB and RT include exactly one link. Thanks bros. If we
   // don't find a link, we're on a detail page, so just use current URL. :P
@@ -143,7 +148,7 @@ async function fetchMetadataFromDetailPage (platform, node) {
       `).src;
       break;
   }
-  const year = new Date(Date.parse(releaseDate)).getFullYear();
+  const year = releaseDateToYear(releaseDate);
 
   return { node, platform, type, year, title, image };
 }
@@ -314,26 +319,35 @@ function destroyModal () {
 
 // NOTE: That all RT poster lockups and some IMDB lockups do not include year.
 function extractMetadata (platform, format, node) {
+  let jsonLd;
   let title, year = null;
   switch (platform) {
     case PLATFORMS.IMDB:
-      title = node.querySelector(`
-        .lister-item-header a,
-        .titleColumn a,
-        [data-testid="title"],
-        .ipc-poster-card__title
-      `).textContent.trim();
-      year = node.querySelector(`
-        .lister-item-year,
-        .titleColumn .secondaryInfo
-      `)?.textContent?.match(/\((\d+)/)[1];
+      switch (format) {
+        case FORMATS.IMDB.DETAIL:
+          jsonLd = getJsonLd(document);
+          title = jsonLd.name;
+          year = releaseDateToYear(jsonLd.datePublished);
+          break;
+        default:
+          title = node.querySelector(`
+          .lister-item-header a,
+          .titleColumn a,
+          [data-testid="title"],
+          .ipc-poster-card__title
+        `).textContent.trim();
+        year = node.querySelector(`
+          .lister-item-year,
+          .titleColumn .secondaryInfo
+        `)?.textContent?.match(/\((\d+)/)[1];
+          break;
+      }
       break;
     case PLATFORMS.RT:
       switch (format) {
         case FORMATS.RT.SERIES_OVERVIEW:
         case FORMATS.RT.SERIES_SEASON:
-          title = $('#main_container h3').childNodes[0].textContent.trim();
-          const jsonLd = getJsonLd(document);
+          jsonLd = getJsonLd(document);
           title = jsonLd.name;
           break;
         default:
@@ -383,10 +397,10 @@ function injectFab (platform, format, node) {
   });
 }
 
-function _pollImdbHomepage() {
+function _pollImdbShovelers() {
   const promise = new Promise((resolve) => {
     const hasCarouselContent = () => {
-      if ($$('.feature-row-loader').length === 0) resolve();
+      if ($$('.feature-row-loader, .rvi-empty-section').length === 0) resolve();
       else setTimeout(hasCarouselContent, 200);
     };
     setTimeout(hasCarouselContent, 200);
@@ -408,12 +422,11 @@ chrome.storage.sync.get('iseentit', async function (data) {
     return memo;
   }, {});
 
-  // The IMDB homepage loads its poster carousel content asynchronously, and
-  // it's slow as heck. So if we encounter these carousels, poll the page until
-  // they are populated before injecting fabs. Weeeeeeeeee.
-  // NOTE: This will apply to other pages that use the same UI. I've just only
-  // seen it on the homepage.
-  if ($$('.ipc-page-grid').length) await _pollImdbHomepage();
+  // IMDB loads "shoveler" carousel content asynchronously, and it's slow as
+  // heck. So if we encounter their loaders, poll the page until they are
+  // populated before injecting fabs. Weeeeeeeeee.
+  const shovelerLoaders = $$('.feature-row-loader, .rvi-empty-section');
+  if (shovelerLoaders.length) await _pollImdbShovelers();
 
   const platform = HOSTS_TO_PLATFORMS[window.location.host];
   for (const [_format, selector] of Object.entries(FORMATS[platform])) {
