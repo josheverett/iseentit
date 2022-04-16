@@ -51,7 +51,15 @@ function filterItems (query) {
 
 function renderTable (tab, items) {
   const node = $(`.tab-pane[data-tab="${tab}"]`);
+  const ratedItems = items.filter((item) => {
+    return item.rewatchability + item.artisticMerit > 0;
+  });
   node.innerHTML = `
+    <p>
+      Total seent: ${items.length}
+      &nbsp;&nbsp;&nbsp;&nbsp; <!-- yolo -->
+      Total rated: ${ratedItems.length}
+    </p>
     <table>
       <thead>
         <tr>
@@ -67,8 +75,8 @@ function renderTable (tab, items) {
             <tr data-filter="${(item.year + item.title).toLowerCase()}">
               <td>${item.year}</td>
               <td>${item.title}</td>
-              <td>${item.rewatchability}</td>
-              <td>${item.artisticMerit}</td>
+              <td>${item.rewatchability || 'N/A'}</td>
+              <td>${item.artisticMerit || 'N/A'}</td>
             </tr>
           `;
         }).join('')}

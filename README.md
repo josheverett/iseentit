@@ -135,5 +135,4 @@ way to do so:
 
 * Support text-based filmography lists (needs a mini UI treatment).
 * Options page: Data import/export (CSV).
-* Options page: Basic stats such as counts of seent and rated.
 * S C A T T E R P L O T S
