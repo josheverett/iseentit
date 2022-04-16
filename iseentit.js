@@ -85,35 +85,53 @@ function decodeSyncData (syncData) {
   };
 }
 
-// RT poster lockups don't include the year. -_-
-async function _getYear (node, metadata) {
-  if (metadata.year) return metadata.year;
-  if (metadata.platform === PLATFORMS.RT) {
-    const linkTarget = node.querySelector('a').href;
-    // Presence of query string in links means we're on the detail page already.
-    const fetchTarget = linkTarget.indexOf('?') > -1
-      ? window.location.href : linkTarget;
-    const detailPage = await fetch(fetchTarget);
-    const html = await detailPage.text();
-    // yolo
-    const matches = new RegExp(/"cag\[release\]":"?(\d+)/, 'g').exec(html);
-    return matches[1];
+async function fetchMetadataFromDetailPage (platform, node) {
+  // All lockups on IMDB and RT include exactly one link. Thanks bros.
+  const detailPage = await fetch(node.querySelector('a').href);
+  const html = await detailPage.text();
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const script = doc.querySelector('script[type="application/ld+json"]');
+  const jsonLd = JSON.parse(script.innerHTML);
+  const type =
+    jsonLd['@type'] === 'Movie' ? CONTENT_TYPES.FILM : CONTENT_TYPES.SERIES;
+  const title = jsonLd.name;
+
+  let releaseDate, image;
+  switch (platform) {
+    case PLATFORMS.IMDB:
+      releaseDate = jsonLd.datePublished;
+      image = jsonLd.image;
+      break;
+    case PLATFORMS.RT:
+      releaseDate = doc.querySelector(`
+        .meta-row time,
+        [data-qa="series-details-premiere-date"],
+        [data-qa="season-premiere-date"]
+      `).textContent;
+      image = doc.querySelector(`
+        [data-qa="movie-poster-link"] img,
+        [data-qa="poster"] img
+      `).src;
+      break;
   }
+  const year = new Date(Date.parse(releaseDate)).getFullYear();
+
+  const yolo = { node, platform, type, year, title, image };
+  console.log('DERP', 'fetchMetadataFromDetailPage', yolo);
+  return yolo;
 }
 
-// TODO: Should just pass detail page URL instead of node. I.e. call _getYear
-// from the caller of upsertRecord. upsertRecord should be ignorant of anything
-// but metadata and chrome.storage.sync.
 async function upsertRecord (node, metadata) {
-  const year = await _getYear(node, metadata);
-  const oldData = PARSED_DATA[metadata.type][metadata.key];
-  const newData = { ...oldData, ...metadata, year };
+  const existingMetadata = PARSED_DATA[metadata.type][metadata.key];
+  const detailMetadata =
+    await fetchMetadataFromDetailPage(metadata.platform, node);
+  const newMetadata = { ...detailMetadata, ...existingMetadata, ...metadata };
 
   SYNC_DATA[metadata.type] = SYNC_DATA[metadata.type] || []; // first write case
 
   let recordToUpdate;
   const existingRecord = SYNC_DATA[metadata.type].find((record) => {
-    return record[0] === newData.year && record[1] === newData.title;
+    return record[0] === newMetadata.year && record[1] === newMetadata.title;
   });
   if (existingRecord) {
     recordToUpdate = existingRecord;
@@ -128,17 +146,18 @@ async function upsertRecord (node, metadata) {
   // insert/update cases get poked the same way.
   recordToUpdate.length = 0;
   recordToUpdate.push(
-    newData.year, newData.title,
-    newData.rewatchability || 0, newData.artisticMerit || 0
+    newMetadata.year, newMetadata.title,
+    newMetadata.rewatchability || 0, newMetadata.artisticMerit || 0
   );
 
   return await chrome.storage.sync.set({ 'iseentit': SYNC_DATA });
 }
 
 async function deleteRecord (node, metadata) {
-  const year = await _getYear(node, metadata);
+  const detailMetadata =
+    await fetchMetadataFromDetailPage(metadata.platform, node);
   const existingRecord = SYNC_DATA[metadata.type].find((record) => {
-    return record[0] === year && record[1] === metadata.title;
+    return record[0] === detailMetadata.year && record[1] === metadata.title;
   });
   const index = SYNC_DATA[metadata.type].indexOf(existingRecord);
   SYNC_DATA[metadata.type].splice(index, 1);
@@ -157,6 +176,11 @@ function createModal (node, metadata, isSeent) {
   const container = document.createElement('iseentit');
   container.className = 'iseentit-modal-container';
   container.dataset.selectedScreen = 1;
+
+  const yearHtml = metadata.year
+    ? `<iseentit class="iseentit-year">(${metadata.year})</iseentit>`
+    : '';
+
   container.innerHTML = `
     <iseentit class="iseentit-modal">
       <iseentit
@@ -171,7 +195,7 @@ function createModal (node, metadata, isSeent) {
         <iseentit class="iseentit-screen" data-screen="1">
           <iseentit class="iseentit-title">
             ${metadata.title}
-            <!-- iseentit class="iseentit-year">(${metadata.year})</iseentit -->
+            ${yearHtml}
           </iseentit>
           <iseentit class="iseentit-btn iseentit-btn-${isSeent ? 'delete' : 'seent'}">
             ${isSeent ? 'Delete' : 'I seent it!'}
@@ -250,63 +274,33 @@ function destroyModal () {
   });
 }
 
-// This isn't even yolo territory. This is just terrible. But it works.
-// TODO: This can be "properly" solved like `year` was for RT.
-function _getImdbType (format, node) {
-  let type;
-  switch (format) {
-    case FORMATS.IMDB.LISTER:
-      type = node.querySelector('.certificate')?.textContent.indexOf('TV-') === 0
-        ? CONTENT_TYPES.SERIES : CONTENT_TYPES.FILM;
-        break;
-    case FORMATS.IMDB.LISTER_MINI:
-      type = node.querySelector('a').href.indexOf('tv') > -1
-        ? CONTENT_TYPES.SERIES : CONTENT_TYPES.FILM;
-        break;
-  }
-  // If nothing worked check the URL for "series".
-  if (type) return type;
-  return window.location.href.indexOf('series') > -1
-    ? CONTENT_TYPES.SERIES : CONTENT_TYPES.FILM;
-}
-
+// NOTE: format is unused currently but only because comma-separated CSS
+// selectors were sufficient. It may be needed for additional lockup support.
 function extractMetadata (platform, format, node) {
+  let title, year = null; // RT poster lockups do not include year.
   switch (platform) {
-    case PLATFORMS.IMDB: {
-      const type = _getImdbType(format, node);
-      const title =
-        node.querySelector('.lister-item-header a, .titleColumn a').textContent;
-      const year =
-        node.querySelector('.lister-item-year, .titleColumn .secondaryInfo')
-        .textContent.match(/\((\d+)/)[1];
-      const metadata = {
-        node,
-        platform,
-        type,
-        title,
-        year,
-        image: node.querySelector('img').src,
-      };
-      metadata.key = makeKeyFromMetadata(metadata);
-      return metadata;
-    }
-    case PLATFORMS.RT: {
-      const type = node.querySelector('a').pathname.indexOf('/m/') === 0
-        ? CONTENT_TYPES.FILM : CONTENT_TYPES.SERIES;
-      const title = node.querySelector(
-        '[class*="Title"], [class*="title"], .p--small').textContent;
-      const metadata = {
-        node,
-        platform,
-        type,
-        title,
-        year: null, // RT doesn't have the year on poster lockups.
-        image: node.querySelector('img').src,
-      };
-      metadata.key = makeKeyFromMetadata(metadata);
-      return metadata;
-    }
+    case PLATFORMS.IMDB:
+      title = node.querySelector(`
+        .lister-item-header a,
+        .titleColumn a
+      `).textContent;
+      year = node.querySelector(`
+        .lister-item-year,
+        .titleColumn .secondaryInfo
+      `)?.textContent?.match(/\((\d+)/)[1];
+      break;
+    case PLATFORMS.RT:
+      title = node.querySelector(`
+        [class*="Title"],
+        [class*="title"],
+        .p--small
+      `).textContent;
+      break;
   }
+  const image = node.querySelector('img').src;
+  const metadata = { node, platform, title, year, image };
+  metadata.key = makeKeyFromMetadata(metadata);
+  return metadata;
 }
 
 function injectFab (platform, format, node) {
