@@ -12,12 +12,25 @@ const SORT_FUNCTIONS = {
   BEST: (a, b) => {
     const aFloor = Math.min(a.rewatchability, a.artisticMerit);
     const bFloor = Math.min(b.rewatchability, b.artisticMerit);
-    return bFloor - aFloor || a.title.localeCompare(b.title);
+    const aTotal = a.rewatchability + a.artisticMerit;
+    const bTotal = b.rewatchability + b.artisticMerit;
+    return bFloor - aFloor
+      || bTotal - aTotal
+      || b.rewatchability - a.rewatchability
+      || b.artisticMerit - a.artisticMerit
+      || a.title.localeCompare(b.title);
   },
   WORST: (a, b) => {
     const aFloor = Math.min(a.rewatchability, a.artisticMerit);
     const bFloor = Math.min(b.rewatchability, b.artisticMerit);
-    return aFloor - bFloor || a.title.localeCompare(b.title);
+    const aTotal = a.rewatchability + a.artisticMerit;
+    const bTotal = b.rewatchability + b.artisticMerit;
+    return aFloor - bFloor
+      || aTotal - bTotal
+      || a.rewatchability - b.rewatchability
+      || a.artisticMerit - b.artisticMerit
+      // It is correct that a and b are not reversed here.
+      || a.title.localeCompare(b.title);
   },
 };
 
