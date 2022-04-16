@@ -117,11 +117,24 @@ function releaseDateToYear (releaseDate) {
   return new Date(Date.parse(releaseDate)).getFullYear();
 }
 
+function _getDetailPageUrl (platform, node) {
+  const isPath = (_platform, path) => {
+    return _platform === platform && window.location.pathname.indexOf(path) === 0;
+  };
+
+  if (
+    isPath(PLATFORMS.IMDB, '/title/')
+    || isPath(PLATFORMS.RT, '/m/')
+    || isPath(PLATFORMS.RT, '/tv/')
+  ) {
+    return window.location.href;
+  }
+
+  return node.querySelector('a')?.href || window.location.href;
+}
+
 async function fetchMetadataFromDetailPage (platform, node) {
-  // All lockups on IMDB and RT include exactly one link. Thanks bros. If we
-  // don't find a link, we're on a detail page, so just use current URL. :P
-  const link = node.querySelector('a');
-  const url = link?.href || window.location.href;
+  const url = _getDetailPageUrl(platform, node);
   const detailPage = await fetch(url);
   const html = await detailPage.text();
   const doc = new DOMParser().parseFromString(html, 'text/html');
