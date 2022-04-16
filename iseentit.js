@@ -20,6 +20,8 @@ const FORMATS = {
   RT: {
     BROWSE: '.mb-movie, .media-list__item', // /browse/ pages
     DETAIL: '.thumbnail-scoreboard-wrap', // detail page
+    SERIES_OVERVIEW: '.tv-series__image-container', // series overview page
+    SERIES_SEASON: '.js-poster-link', // series season page
     YMAL: 'tiles-carousel-responsive-item', // "YOU MIGHT ALSO LIKE"
   },
 };
@@ -99,13 +101,20 @@ function decodeSyncData (syncData) {
     .concat(itemsToMetadata(CONTENT_TYPES.SERIES, syncData.SERIES));
 }
 
+function getJsonLd (doc) {
+  const script = doc.querySelector('script[type="application/ld+json"]');
+  return JSON.parse(script.innerHTML);
+}
+
 async function fetchMetadataFromDetailPage (platform, node) {
-  // All lockups on IMDB and RT include exactly one link. Thanks bros.
-  const detailPage = await fetch(node.querySelector('a').href);
+  // All lockups on IMDB and RT include exactly one link. Thanks bros. If we
+  // don't find a link, we're on a detail page, so just use current URL. :P
+  const link = node.querySelector('a');
+  const url = link?.href || window.location.href;
+  const detailPage = await fetch(url);
   const html = await detailPage.text();
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  const script = doc.querySelector('script[type="application/ld+json"]');
-  const jsonLd = JSON.parse(script.innerHTML);
+  const jsonLd = getJsonLd(doc);
   const type =
     jsonLd['@type'] === 'Movie' ? CONTENT_TYPES.FILM : CONTENT_TYPES.SERIES;
   const title = jsonLd.name;
@@ -299,8 +308,6 @@ function destroyModal () {
   });
 }
 
-// NOTE: format is unused currently but only because comma-separated CSS
-// selectors were sufficient. It may be needed for additional lockup support.
 function extractMetadata (platform, format, node) {
   let title, year = null; // RT poster lockups do not include year.
   switch (platform) {
@@ -315,11 +322,21 @@ function extractMetadata (platform, format, node) {
       `)?.textContent?.match(/\((\d+)/)[1];
       break;
     case PLATFORMS.RT:
-      title = node.querySelector(`
-        [class*="Title"],
-        [class*="title"],
-        .p--small
-      `).textContent;
+      switch (format) {
+        case FORMATS.RT.SERIES_OVERVIEW:
+        case FORMATS.RT.SERIES_SEASON:
+          title = $('#main_container h3').childNodes[0].textContent.trim();
+          const jsonLd = getJsonLd(document);
+          title = jsonLd.name;
+          break;
+        default:
+          title = node.querySelector(`
+            [class*="Title"],
+            [class*="title"],
+            .p--small
+          `).textContent;
+          break;
+      }
       break;
   }
   const image = node.querySelector('img').src;
@@ -361,7 +378,8 @@ function injectFab (platform, format, node) {
   }
   node.appendChild(fab);
 
-  fab.addEventListener('click', () => {
+  fab.addEventListener('click', (e) => {
+    e.stopPropagation(); // Important to prevent videos from playing etc.
     // Metadata extracted on click because image assets aren't ready at runtime.
     createModal(node, extractMetadata(platform, format, node), isSeent);
   });
