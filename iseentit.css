@@ -25,11 +25,13 @@ iseentit {
 }
 
 #iseentit-fab {
-  z-index: 1; /* Solves 90% of default stacking context issues. */
+  /* Use custom tags AND namespaced CSS to avoid page CSS messing with the
+     extension, then IMDB ruins everything with a :not selector lmao. */
+  position: absolute !important;
+  z-index: 2147483647; /* Stacking contexts I don't control are FUN. */
 }
 
 .iseentit-fab {
-  position: absolute;
   top: 10px;
   left: 10px;
   width: 50px;
@@ -233,7 +235,6 @@ iseentit {
 
 .iseentit-seent,
 .iseentit-rated {
-  position: absolute;
   top: 10px;
   left: 10px;
   margin: 0;

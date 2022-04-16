@@ -12,8 +12,13 @@ const PLATFORMS = {
 };
 
 // FORMATS[platform][format] --> CSS selector
+// NOTE: that some of these formats actually correspond to other areas (not
+// listed here) on these platforms. The format names just represent the first
+// place on each platform I found them. E.g. none of these formats mention the
+// RT homepage, but it "just works". yolo
 const FORMATS = {
   IMDB: {
+    HOMEPAGE: '.ipc-poster-card', // homepage (poster-only) carousels
     LISTER: '.lister-item', // "lister" UX, e.g. /search/title/?genres=sci-fi
     LISTER_MINI: '.lister-list > tr', // compact "lister" UX, e.g. Top 250
   },
@@ -59,6 +64,7 @@ const RATINGS = { rewatchability: 0, artisticMerit: 0 }; // yolo
 let SYNC_DATA, PARSED_DATA, PARSED_DATA_BY_TITLE;
 
 function getSavedMetadata (title, year) {
+  if (!title || !year) return undefined;
   return PARSED_DATA.find(m => m.title === title && m.year === year);
 }
 
@@ -139,9 +145,7 @@ async function fetchMetadataFromDetailPage (platform, node) {
   }
   const year = new Date(Date.parse(releaseDate)).getFullYear();
 
-  const yolo = { node, platform, type, year, title, image };
-  console.log('DERP', 'fetchMetadataFromDetailPage', yolo);
-  return yolo;
+  return { node, platform, type, year, title, image };
 }
 
 async function upsertRecord (node, metadata) {
@@ -308,14 +312,17 @@ function destroyModal () {
   });
 }
 
+// NOTE: That all RT poster lockups and some IMDB lockups do not include year.
 function extractMetadata (platform, format, node) {
-  let title, year = null; // RT poster lockups do not include year.
+  let title, year = null;
   switch (platform) {
     case PLATFORMS.IMDB:
       title = node.querySelector(`
         .lister-item-header a,
-        .titleColumn a
-      `).textContent;
+        .titleColumn a,
+        [data-testid="title"],
+        .ipc-poster-card__title
+      `).textContent.trim();
       year = node.querySelector(`
         .lister-item-year,
         .titleColumn .secondaryInfo
@@ -334,7 +341,7 @@ function extractMetadata (platform, format, node) {
             [class*="Title"],
             [class*="title"],
             .p--small
-          `).textContent;
+          `).textContent.trim();
           break;
       }
       break;
@@ -347,24 +354,15 @@ function injectFab (platform, format, node) {
   const _isRated = (m) => m && m.rewatchability > 0 && m.artisticMerit > 0;
 
   const metadata = extractMetadata(platform, format, node);
-
-  let isSeent = false;
-  let isRated = false;
-  switch (platform) {
-    case PLATFORMS.RT:
-      // This is necessary for RT because their poster lockups do not include
-      // the year. So if you've seent Metropolis (1927), but you encounter a
-      // lockup for Metroplis (2001), the latter will be incorrectly marked
-      // seent. Not a huge deal, but since IMDB does include year in their
-      // lockups there's no reason to allow this bug outside of RT.
-      isSeent = metadata.title in PARSED_DATA_BY_TITLE;
-      isRated = _isRated(PARSED_DATA_BY_TITLE[metadata.title]);
-      break;
-    default:
-      const existingMetadata = getSavedMetadata(metadata.title, metadata.year);
-      isSeent = !!existingMetadata;
-      isRated = _isRated(existingMetadata);
-  }
+  // This is necessary because some RT and IMDB poster lockups do not include
+  // the year. So if you've seent Metropolis (1927), but you encounter a
+  // lockup for Metroplis (2001), the latter will be incorrectly marked
+  // seent. Such is life. Detail pages provide a workaround when you need to
+  // disambiguate.
+  const existingMetadata = getSavedMetadata(metadata.title, metadata.year)
+    || PARSED_DATA_BY_TITLE[metadata.title];
+  const isSeent = !!existingMetadata;
+  const isRated = _isRated(existingMetadata);
 
   const fab = document.createElement('iseentit');
   fab.id = 'iseentit-fab';
@@ -385,12 +383,23 @@ function injectFab (platform, format, node) {
   });
 }
 
+function _pollImdbHomepage() {
+  const promise = new Promise((resolve) => {
+    const hasCarouselContent = () => {
+      if ($$('.feature-row-loader').length === 0) resolve();
+      else setTimeout(hasCarouselContent, 200);
+    };
+    setTimeout(hasCarouselContent, 200);
+  });
+  return promise;
+}
+
 // TODO: This whole PARSED_DATA thing to get a hashtable lookup is stupid.
 // We're working on the order of at most ~2000 items, so just calling a method
 // that does a simple Array.find() is more than sufficient. This was a
 // premature optimization. It's very useful to parse the condensed data storage
 // format to JSON blobs, but it should stay an array. Useless complexity.
-chrome.storage.sync.get('iseentit', function (data) {
+chrome.storage.sync.get('iseentit', async function (data) {
   SYNC_DATA = data.iseentit || { FILM: [], SERIES: [] };
   PARSED_DATA = decodeSyncData(SYNC_DATA);
 
@@ -398,6 +407,13 @@ chrome.storage.sync.get('iseentit', function (data) {
     memo[metadata.title] = metadata;
     return memo;
   }, {});
+
+  // The IMDB homepage loads its poster carousel content asynchronously, and
+  // it's slow as heck. So if we encounter these carousels, poll the page until
+  // they are populated before injecting fabs. Weeeeeeeeee.
+  // NOTE: This will apply to other pages that use the same UI. I've just only
+  // seen it on the homepage.
+  if ($$('.ipc-page-grid').length) await _pollImdbHomepage();
 
   const platform = HOSTS_TO_PLATFORMS[window.location.host];
   for (const [_format, selector] of Object.entries(FORMATS[platform])) {
